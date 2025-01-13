@@ -65,6 +65,26 @@
 - **本人確認**
   - パスワード再登録時には本人確認を行う。
 
+## URL 設計
+
+| URL                                             | HTTP メソッド | 説明                         |
+| ----------------------------------------------- | ------------- | ---------------------------- |
+| /folders/{フォルダ ID}/tasks                    | GET           | タスク一覧ページを表示する   |
+| /folders/create                                 | GET           | フォルダ作成ページを表示する |
+| /folders/create                                 | POST          | フォルダ作成処理を実行する   |
+| /folders/{id}/edit                              | GET           | フォルダ編集ページを表示する |
+| /folders/{id}/edit                              | POST          | フォルダ編集処理を実行する   |
+| /folders/{id}/delete                            | GET           | フォルダ削除ページを表示する |
+| /folders/{id}/delete                            | POST          | フォルダ削除処理を実行する   |
+| /folders/{フォルダ ID}/tasks/create             | GET           | タスク作成ページを表示する   |
+| /folders/{フォルダ ID}/tasks/create             | POST          | タスク作成処理を実行する     |
+| /folders/{フォルダ ID}/tasks/{タスク ID}/edit   | GET           | タスク編集ページを表示する   |
+| /folders/{フォルダ ID}/tasks/{タスク ID}/edit   | POST          | タスク編集処理を実行する     |
+| /folders/{フォルダ ID}/tasks/{タスク ID}/delete | GET           | タスク削除ページを表示する   |
+| /folders/{フォルダ ID}/tasks/{タスク ID}/delete | POST          | タスク削除処理を実行する     |
+
+---
+
 ## 環境構築手順
 
 ### ディレクトリの作成
@@ -293,4 +313,84 @@ DB_PASSWORD=root
 
 ```bash
 php artisan migrate
+```
+
+## 実装手順
+
+### フォルダー機能の作成
+
+1. Controller の作成
+
+```bash
+php artisan make:controller TaskController
+```
+
+2. ルーティングの追加
+
+```web.php
+Route::get('/folders/{id}/tasks', [TaskController::class, 'index'])->name('tasks.index');
+```
+
+3. マイグレーションの作成と実行
+
+- マイグレーションの作成
+
+```bash
+php artisan make:migration create_folders_table --create=folders
+```
+
+- マイグレーションファイルの編集
+
+```Y_m_d_His_create_folders_table.php
+    public function up(): void
+    {
+        Schema::create('folders', function (Blueprint $table) {
+            $table->id();
+            $table->string('title', 20);
+            $table->timestamps();
+        });
+    }
+```
+
+- マイグレーションの実行
+
+```bash
+php artisan migrate
+```
+
+4. モデルの作成
+
+```bash
+php artisan make:model Folder
+```
+
+5. テストデータの作成
+
+- Factory の作成
+
+```bash
+php artisan make:factory FolderFactory
+```
+
+```FolderFactory.php
+  public function definition(): array
+  {
+      return [
+          'title' => $this->faker->word,
+          'created_at' => Carbon::now(),
+          'updated_at' => Carbon::now(),
+      ];
+  }
+```
+
+- Seeder の作成
+
+```bash
+php artisan make:seeder FoldersTableSeeder
+```
+
+- Seeder の編集
+
+```FoldersTableSeeder
+Folder::factory()->count(10)->create();
 ```
