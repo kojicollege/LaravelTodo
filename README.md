@@ -315,6 +315,54 @@ DB_PASSWORD=root
 php artisan migrate
 ```
 
+---
+
+## TailwindCSS の導入
+
+1. パッケージのインストール
+
+```bash
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+```
+
+2. Tailwind CSS の設定
+
+```tailwind.config.js
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    './resources/**/*.blade.php',
+    './resources/**/*.js',
+    './resources/**/*.vue',
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+```
+
+3. CSS ファイルに Tailwind のディレクティブを追加
+
+```resources/css/app.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+4. Vite 経由で CSS を読み込み
+
+```php
+@vite(['resources/css/app.css', 'resources/js/app.js'])
+```
+
+5. ビルド
+
+```bash
+npm run dev
+```
+
 ## 実装手順
 
 ### フォルダー機能の作成
@@ -393,4 +441,20 @@ php artisan make:seeder FoldersTableSeeder
 
 ```FoldersTableSeeder
 Folder::factory()->count(10)->create();
+```
+
+6. フォルダー機能の作成
+
+- Controller の編集
+
+```TaskController.php
+    public function index(int $id)
+    {
+        $folders = Folder::all();
+
+        return view('tasks/index', [
+            'folders' => $folders,
+            "folder_id" => $id
+        ]);
+    }
 ```
