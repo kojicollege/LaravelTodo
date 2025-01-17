@@ -512,3 +512,248 @@ php artisan make:view tasks/index
 </x-layout.home>
 
 ```
+
+### タスク一覧機能の実装
+
+1. マイグレーションの作成・実行
+
+- マイグレーションの作成
+
+```bash
+php artisan make:migration create_tasks_table --create=tasks
+```
+
+```Y_m_d_His_create_tasks_table.php
+    public function up(): void
+    {
+        Schema::create('tasks', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('folder_id')
+                ->constrained()
+                ->onDelete('cascade');
+            $table->string('title', 100);
+            $table->date('due_date');
+            $table->integer('status')->default(1);
+            $table->timestamps();
+        });
+    }
+```
+
+- マイグレーションの実施
+
+```bash
+php artisan migrate
+```
+
+2. モデルの作成
+
+```bash
+php artisan make:model Task
+```
+
+3. テストデータの作成
+
+- Factory の作成
+
+```bash
+php artisan make:factory TaskFactory
+```
+
+```TaskFactory.php
+    public function definition(): array
+    {
+        return [
+            'folder_id' => 1,
+            'title' => $this->faker->word,
+            'status' => $this->faker->randomElement([1, 2, 3]),
+            'due_date' => Carbon::now()->addDay(rand(1, 3)),
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
+        ];
+    }
+
+    public function withTitle(string $title)
+    {
+        return $this->state([
+            'title' => $title,
+        ]);
+    }
+```
+
+- Seeder の作成
+
+```bash
+php artisan make:seeder TasksTableSeeder
+```
+
+```TasksTableSeeder.php
+    public function run(): void
+    {
+        for ($i = 1; $i <= 3; $i++) {
+            Task::factory()->withTitle('サンプルタスク'.$i)->create();
+        }
+    }
+```
+
+```DatabaseSeeder.php
+    public function run(): void
+    {
+        $this->call(FoldersTableSeeder::class);
+        $this->call(TasksTableSeeder::class);
+    }
+```
+
+- Seeder の実行
+
+```bash
+php artisan db:seed
+```
+
+4. Controller の修正
+
+```TaskController.php
+    public function index(int $id)
+    {
+        $folders = Folder::all();
+
+        $folder = Folder::find($id);
+
+        $tasks = $folder->tasks()->get();
+
+        return view('tasks/index', [
+            'folders' => $folders,
+            'folder_id' => $folder->id,
+            'tasks' => $tasks
+        ]);
+    }
+```
+
+**Folder::find($id)**
+Find メソッドは主キーを条件に検索を行う
+
+**Tasks::where('folder_id', $folder->id)->get()**
+クエリビルダは SQL を書かなくても Laravel が SQL を生成してくれる
+
+5. View の修正
+
+```src/resources/views/tasks/index.blade.php
+<div class="w-2/3 mx-auto">
+  <div class="bg-white shadow-md rounded-lg">
+      <div class="bg-gray-200 font-bold px-4 py-2 rounded-t-lg">
+          タスク
+      </div>
+
+      <div class="p-4">
+          <div class="text-right">
+              <a href="#"
+                  class="block w-full bg-blue-500 hover:bg-blue-600 text-white text-center py-2 px-4 rounded">
+                  タスクを追加する
+              </a>
+          </div>
+      </div>
+
+      <table class="min-w-full border-collapse border border-gray-300">
+          <thead>
+              <tr class="bg-gray-100 border-b border-gray-300">
+                  <th class="text-left px-4 py-2">タイトル</th>
+                  <th class="text-left px-4 py-2">状態</th>
+                  <th class="text-left px-4 py-2">期限</th>
+                  <th class="text-center px-4 py-2">編集</th>
+                  <th class="text-center px-4 py-2">削除</th>
+              </tr>
+          </thead>
+          <tbody>
+              @foreach($tasks as $task)
+              <tr class="border-b border-gray-300 hover:bg-gray-50">
+                  <td class="px-4 py-2">{{ $task->title }}</td>
+                  <td class="px-4 py-2">
+                      <span
+                          class="inline-block px-2 py-1 text-sm font-medium bg-gray-200 rounded {{ $task->status_class }}">
+                          {{ $task->status_label }}
+                      </span>
+                  </td>
+                  <td class="px-4 py-2">{{ $task->formatted_due_date }}</td>
+                  <td class="text-center px-4 py-2">
+                      <a href="#" class="text-blue-500 hover:text-blue-700">
+                          編集
+                      </a>
+                  </td>
+                  <td class="text-center px-4 py-2">
+                      <a href="#" class="text-red-500 hover:text-red-700">
+                          削除
+                      </a>
+                  </td>
+              </tr>
+              @endforeach
+          </tbody>
+      </table>
+  </div>
+</div>
+```
+
+6. モデルにアクセサを追加
+
+```Task.php
+public const STATUS = [
+        1 => ['label' => '未着手', 'class' => 'bg-red-500 text-white rounded px-2 py-1'],
+        2 => ['label' => '着手中', 'class' => 'bg-blue-500 text-white rounded px-2 py-1'],
+        3 => ['label' => '完了', 'class' => 'bg-gray-500 text-white rounded px-2 py-1'],
+    ];
+
+    /**
+     * ステータス（状態）ラベルのアクセサメソッド
+     *
+     * @return string
+     */
+    public function getStatusLabelAttribute()
+    {
+        $status = $this->attributes['status'];
+
+        if (!isset(self::STATUS[$status])) {
+            return '';
+        }
+
+        return self::STATUS[$status]['label'];
+    }
+
+    /**
+     * 状態を表すHTMLクラスのアクセサメソッド
+     *
+     * @return string
+     */
+    public function getStatusClassAttribute()
+    {
+        $status = $this->attributes['status'];
+
+        if (!isset(self::STATUS[$status])) {
+            return '';
+        }
+
+        return self::STATUS[$status]['class'];
+    }
+
+    /**
+     * 整形した期限日のアクセサメソッド
+     *
+     * @return string
+     */
+    public function getFormattedDueDateAttribute()
+    {
+        return Carbon::createFromFormat('Y-m-d', $this->attributes['due_date'])
+            ->format('Y/m/d');
+    }
+```
+
+7. モデルのリレーション
+
+```Folder.php
+    /*
+    * フォルダクラスとタスククラスを関連付けするメソッド
+    *
+    * @return \Illuminate\Database\Eloquent\Relations\HasMany
+    */
+    public function tasks()
+    {
+        return $this->hasMany('App\Models\Task');
+    }
+```

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Folder;
+use App\Models\Task;
 
 class TaskController extends Controller
 {
@@ -18,9 +19,14 @@ class TaskController extends Controller
     {
         $folders = Folder::all();
 
+        $folder = Folder::find($id);
+
+        $tasks = $folder->tasks()->get();
+
         return view('tasks/index', [
             'folders' => $folders,
-            "folder_id" => $id
+            'folder_id' => $folder->id,
+            'tasks' => $tasks
         ]);
     }
 }
