@@ -210,7 +210,7 @@ cd docker && mkdir php && mkdir nginx
 4. php ディレクト内に Dockerfile php.ini を作成
 
 ```bash
-cd ../php && touch Dockerfile && touch php.ini
+cd php && touch Dockerfile && touch php.ini
 ```
 
 ```Dockerfile
@@ -756,4 +756,176 @@ public const STATUS = [
     {
         return $this->hasMany('App\Models\Task');
     }
+```
+
+### フォルダ作成機能
+
+1. ルーティング
+   | URL | HTTP メソッド | 説明 |
+   | ----------------------------------------------- | ------------- | ---------------------------- |
+   | /folders/create | GET | フォルダ作成ページを表示する |
+   | /folders/create | POST | フォルダ作成処理を実行する |
+
+```web.php
+use App\Http\Controllers\FolderController;
+
+Route::get('/folders/create', [FolderController::class,"showCreateForm"])->name('folders.create');
+Route::post('/folders/create', [FolderController::class,"create"]);
+
+```
+
+2. フォームの表示
+
+- Controller の作成
+
+```bash
+php artisan make:controller FolderController
+```
+
+- Controller の編集
+
+```FolderController.php
+    /**
+     *  【フォルダ作成ページの表示機能】
+     *
+     *  GET /folders/create
+     *  @return \Illuminate\View\View
+     */
+    public function showCreateForm()
+    {
+        return view('folders/create');
+    }
+
+    /**
+     *  【フォルダの作成機能】
+     *
+     *  POST /folders/create
+     *  @param Request $request （リクエストクラスの$request）
+     *  @return \Illuminate\Http\RedirectResponse
+     */
+    public function create(Request $request)
+    {
+        $folder = new Folder();
+        $folder->title = $request->title;
+        $folder->save();
+
+        return redirect()->route('tasks.index', [
+            'id' => $folder->id,
+        ]);
+    }
+```
+
+**Request クラス**
+Request クラスのインスタンスにはユーザーの入力フォームの入力値などが含まれる
+
+**データベースへの書き込み**
+データベースへの書き込みは以下の手順で実装します。
+
+1. モデルクラスのインスタンスを作成する。
+2. インスタンスのプロパティに値を代入する。
+3. save メソッドを呼び出す。
+
+- View の作成
+
+```bash
+php artisan make:view folders/create
+```
+
+- View の編集
+
+```src/resources/views/folders/create.blade.php
+<div class="flex justify-center">
+    <div class="w-full max-w-md">
+        <div class="bg-white shadow-md rounded-lg">
+            <div class="bg-gray-800 text-white font-bold px-4 py-2 rounded-t-lg">
+                フォルダを追加する
+            </div>
+            <div class="p-6">
+                <form action="{{ route('folders.create') }}" method="post">
+                    @csrf
+                    <div class="mb-4">
+                        <label for="title" class="block text-sm font-medium text-gray-700">
+                            フォルダ名
+                        </label>
+                        <input
+                            type="text"
+                            name="title"
+                            id="title"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+                    <div class="text-right">
+                        <button
+                            type="submit"
+                            class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+                        >
+                            送信
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+```src/resources/views/tasks/index.blade.php
+<a href="{{ route('folders.create') }}"
+    class="block w-full text-center py-2 px-4 border rounded bg-gray-100 hover:bg-gray-200">
+    フォルダを追加する
+</a>
+```
+
+3. バリデーションの作成
+   不正なデータが来た場合にデータ保存時にエラーになるのでそれを防ぐために必要になります。
+
+![alt text](image.png)
+
+- FormRequest の作成
+
+```bash
+php artisan make:request CreateFolder
+```
+
+タイトルの入力を必須にします。
+
+```CreateFolder.php
+    public function rules(): array
+    {
+        return [
+            'title' => 'required',
+        ];
+    }
+```
+
+- Controller の編集
+
+CreateFolder クラスをインポートし CreateFolder を使用して Request を取得することでバリデーションチェック機能を追加することができる。
+
+```FolderController.php
+    public function create(CreateFolder $request)
+    {
+        $folder = new Folder();
+        $folder->title = $request->title;
+        $folder->save();
+
+        return redirect()->route('tasks.index', [
+            'id' => $folder->id,
+        ]);
+    }
+```
+
+- View の編集
+  エラーがあった場合のエラーメッセージの追加
+
+```src/resources/views/folders/create.blade.php
+@if($errors->any())
+    <div class="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <ul class="list-disc list-inside">
+            @foreach($errors->all() as $message)
+                <li>{{ $message }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 ```

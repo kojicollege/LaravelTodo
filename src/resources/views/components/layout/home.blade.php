@@ -17,6 +17,11 @@
 </head>
 
 <body>
+    <header>
+        <nav class="flex items-center justify-between bg-gray-800 h-24 px-[2%] mb-12">
+            <a class="text-gray-400 hover:text-white text-lg" href="/">ToDo App</a>
+        </nav>
+    </header>
     <main>
         {{ $slot }}
     </main>

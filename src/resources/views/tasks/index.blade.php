@@ -6,7 +6,7 @@
                     <nav class="border rounded-lg shadow bg-white">
                         <div class="bg-gray-200 px-4 py-2 font-semibold rounded-t-lg">フォルダ</div>
                         <div class="p-4">
-                            <a href="#"
+                            <a href="{{ route('folders.create') }}"
                                 class="block w-full text-center py-2 px-4 border rounded bg-gray-100 hover:bg-gray-200">
                                 フォルダを追加する
                             </a>
