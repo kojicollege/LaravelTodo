@@ -22,7 +22,7 @@ class CreateFolder extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => 'required',
+            'title' => 'required|max:20',
         ];
     }
 }
